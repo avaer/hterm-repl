@@ -13,6 +13,8 @@ const wss = new ws.Server({
   noServer: true
 });
 wss.on('connection', ws => {
+  let live = true;
+
   const input = new stream.Readable();
   input._read = function() {};
   const output = new stream.Writable();
@@ -33,8 +35,10 @@ wss.on('connection', ws => {
   });
   const _bindRepl = r => {
     r.on('exit', () => {
-      r = _makeRepl();
-      _bindRepl(r);
+      if (live) {
+        r = _makeRepl();
+        _bindRepl(r);
+      }
     });
   };
   let r = _makeRepl();
@@ -56,10 +60,10 @@ wss.on('connection', ws => {
       }
     }
   });
-  /* r.on('data', d => {
-    m.send(d);
-  }); */
-  // ws.pipe(r).pipe(ws);
+  ws.on('close', () => {
+    live = false;
+    r.close();
+  });
 });
 
 const server = http.createServer(app);
