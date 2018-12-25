@@ -14,16 +14,7 @@ const wss = new ws.Server({
 });
 wss.on('connection', ws => {
   const input = new stream.Readable();
-  input._read = function() {
-    // console.log('read');
-    /* for (let i = 0; i < inputBuffers.length; i++) {
-      this.push(inputBuffers[i]);
-    }
-    inputBuffers.length = 0; */
-  };
-  /* input.on('data', d => {
-    console.log('input data', d);
-  }); */
+  input._read = function() {};
   const output = new stream.Writable();
   output._write = function(chunk, encoding, next) {
     if (encoding !== 'buffer') {
@@ -33,16 +24,21 @@ wss.on('connection', ws => {
 
     next();
   };
-  /* input.on('data', d => {
-    output.write(d);
-  }); */
-  const r = repl.start({
+  const _makeRepl = () => repl.start({
     prompt: '[x] ',
     input,
     output,
     terminal: true,
     useColors: true,
   });
+  const _bindRepl = r => {
+    r.on('exit', () => {
+      r = _makeRepl();
+      _bindRepl(r);
+    });
+  };
+  let r = _makeRepl();
+  _bindRepl(r);
   ws.on('message', m => {
     const j = JSON.parse(m);
     const {method, args} = j;
