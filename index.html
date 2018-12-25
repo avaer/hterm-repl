@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+<body>
+<style>
+body {
+  margin: 0;
+}
+</style>
+<div id=terminal></div>
+<script src="js/hterm_all.js"></script>
+<script>
+  hterm.defaultStorage = new lib.Storage.Local();
+  term = new hterm.Terminal();
+  // window.term = term;
+  
+  // term.keyboard.installKeyboard(window.document);
+  // term.keyboard.installKeyboard(el);
+  // el.focus();
+
+  // term.setCursorPosition(0, 0);
+  // term.setCursorVisible(true);
+  term.prefs_.set('ctrl-c-copy', true);
+  term.prefs_.set('ctrl-v-paste', true);
+  term.prefs_.set('use-default-window-copy', true);
+  term.prefs_.set('send-encoding', 'raw');
+  term.prefs_.set('receive-encoding', 'raw');
+  term.prefs_.set('font-size', 14);
+  term.prefs_.set('cursor-color', '#FFF');
+
+  const el = document.getElementById('terminal');
+  term.decorate(el);
+
+  term.scrollPort_.screen_.setAttribute('spellcheck', 'false');
+  term.scrollPort_.screen_.setAttribute('autocorrect', 'false');
+  term.scrollPort_.screen_.setAttribute('autocomplete', 'false');
+  term.scrollPort_.screen_.setAttribute('contenteditable', 'false');
+
+  class CommandClass {
+    run() {}
+  }
+  term.runCommandClass(CommandClass, document.location.hash.substr(1));
+
+  const socket = new WebSocket((window.location.protocol === 'http:' ? 'ws:' : 'wss:') + '//' + window.location.host + '/repl');
+  socket.binaryType = 'arraybuffer';
+  socket.addEventListener('open', () => {
+    // console.log('got open');
+    // term.runCommandClass(Wetty, document.location.hash.substr(1));
+    socket.send(JSON.stringify({
+      method: 'resize',
+      args: {
+        col: term.screenSize.width,
+        row: term.screenSize.height,
+      },
+    }));
+
+    /* if (buf && buf !== '') {
+      term.io.writeUTF8(buf);
+      buf = '';
+    } */
+
+    const _send = s => {
+      console.log('send', {s});
+      socket.send(JSON.stringify({
+        method: 'c',
+        args: s,
+      }));
+    };
+    term.io.onVTKeystroke = _send;
+    term.io.sendString = _send;
+
+    const _resize = (col, row) => {
+      socket.send(JSON.stringify({
+        method: 'resize',
+        args: {
+          col,
+          row,
+        },
+      }));
+    };
+    term.io.onTerminalResize = _resize;
+
+    const textDecoder = new TextDecoder();
+    socket.addEventListener('message', m => {
+      term.io.writeUTF8(textDecoder.decode(m.data));
+    });
+  });
+  socket.addEventListener('error', err => {
+    console.warn(err.stack);
+  });
+</script>
+</body>
+</html>
