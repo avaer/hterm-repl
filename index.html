@@ -59,7 +59,6 @@ body {
     } */
 
     const _send = s => {
-      console.log('send', {s});
       socket.send(JSON.stringify({
         method: 'c',
         args: s,
