@@ -40,7 +40,7 @@ body {
   }
   term.runCommandClass(CommandClass, document.location.hash.substr(1));
 
-  const socket = new WebSocket((window.location.protocol === 'http:' ? 'ws:' : 'wss:') + '//' + window.location.host + '/repl');
+  const socket = new WebSocket((window.location.protocol === 'http:' ? 'ws:' : 'wss:') + '//' + window.location.host + '/' + window.location.search);
   socket.binaryType = 'arraybuffer';
   socket.addEventListener('open', () => {
     // console.log('got open');
