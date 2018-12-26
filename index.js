@@ -59,7 +59,7 @@ module.exports = ({port = DEFAULT_PORT}) => {
           break;
         }
         case 'resize': {
-          console.log('resize', args);
+          // console.log('resize', args); // XXX
           break;
         }
         default: {
