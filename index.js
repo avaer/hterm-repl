@@ -1,79 +1,98 @@
+const events = require('events');
+const {EventEmitter} = events;
 const stream = require('stream');
 const http = require('http');
 const repl = require('repl');
 const express = require('express');
 const ws = require('ws');
 
-const port = process.env['PORT'] || 8000;
+const DEFAULT_PORT = 9223;
 
-const app = express();
-app.get('*', express.static(__dirname));
+module.exports = ({port = DEFAULT_PORT}) => {
+  const app = express();
+  app.get('*', express.static(__dirname));
 
-const wss = new ws.Server({
-  noServer: true
-});
-wss.on('connection', ws => {
-  let live = true;
-
-  const input = new stream.Readable();
-  input._read = function() {};
-  const output = new stream.Writable();
-  output._write = function(chunk, encoding, next) {
-    if (encoding !== 'buffer') {
-      chunk = Buffer.from(chunk, encoding);
-    }
-    ws.send(chunk);
-
-    next();
-  };
-  const _makeRepl = () => repl.start({
-    prompt: '[x] ',
-    input,
-    output,
-    terminal: true,
-    useColors: true,
+  const wss = new ws.Server({
+    noServer: true
   });
-  const _bindRepl = r => {
-    r.on('exit', () => {
-      if (live) {
-        r = _makeRepl();
-        _bindRepl(r);
+  const _makeRepl = (ws, spec) => {
+    let live = true;
+
+    const input = new stream.Readable();
+    input._read = function() {};
+    const output = new stream.Writable();
+    output._write = function(chunk, encoding, next) {
+      if (encoding !== 'buffer') {
+        chunk = Buffer.from(chunk, encoding);
+      }
+      ws.send(chunk);
+
+      next();
+    };
+    const _makeInstance = () => repl.start({
+      prompt: '[x] ',
+      input,
+      output,
+      eval(s, context, filename, cb) {
+        localEval(s, context, filename, cb);
+      },
+      global: true,
+      terminal: true,
+      useColors: true,
+    });
+    const _bindInstance = r => {
+      r.on('exit', () => {
+        if (live) {
+          r = _makeInstance();
+          _bindInstance(r);
+        }
+      });
+    };
+    let r = _makeInstance();
+    _bindInstance(r);
+    ws.on('message', m => {
+      const j = JSON.parse(m);
+      const {method, args} = j;
+      switch (method) {
+        case 'c': {
+          input.push(args, 'utf8');
+          break;
+        }
+        case 'resize': {
+          console.log('resize', args);
+          break;
+        }
+        default: {
+          console.warn('unknown method', JSON.stringify(method));
+        }
       }
     });
-  };
-  let r = _makeRepl();
-  _bindRepl(r);
-  ws.on('message', m => {
-    const j = JSON.parse(m);
-    const {method, args} = j;
-    switch (method) {
-      case 'c': {
-        input.push(args, 'utf8');
-        break;
-      }
-      case 'resize': {
-        console.log('resize', args);
-        break;
-      }
-      default: {
-        console.warn('unknown method', JSON.stringify(method));
-      }
-    }
-  });
-  ws.on('close', () => {
-    live = false;
-    r.close();
-  });
-});
+    ws.on('close', () => {
+      live = false;
+      r.close();
+    });
 
-const server = http.createServer(app);
-server.on('upgrade', (request, socket, head) => {
-  if (request.url === '/repl') {
+    let localEval = () => {};
+    return {
+      setEval(newEval) {
+        localEval = newEval;
+      },
+      close() {
+        ws.close();
+      },
+    };
+  };
+
+  const server = http.createServer(app);
+  server.on('upgrade', (request, socket, head) => {
     wss.handleUpgrade(request, socket, head, ws => {
-      wss.emit('connection', ws);
+      const r = _makeRepl(ws);
+      r.url = request.url;
+      replServer.emit('repl', r);
     });
-  } else {
-    socket.destroy();
-  }
-});
-server.listen(port);
+  });
+  server.listen(port);
+
+  const replServer = new EventEmitter();
+  return replServer;
+};
