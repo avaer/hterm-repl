@@ -115,7 +115,7 @@ module.exports = ({port = DEFAULT_PORT}, cb) => {
     });
   });
   server.on('error', cb);
-  server.listen(port, () => {
+  server.listen(port, '192.168.0.14', () => {
     cb(null, replServer);
   });
 };
