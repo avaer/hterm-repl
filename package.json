@@ -17,7 +17,6 @@
   },
   "homepage": "https://github.com/modulesio/hterm-repl#readme",
   "dependencies": {
-    "express": "^4.16.4",
     "ws": "^6.1.2"
   }
 }
