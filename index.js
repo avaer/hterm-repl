@@ -1,16 +1,37 @@
 const events = require('events');
 const {EventEmitter} = events;
 const stream = require('stream');
+const path = require('path');
+const fs = require('fs');
 const http = require('http');
 const repl = require('repl');
-const express = require('express');
 const ws = require('ws');
 
 const DEFAULT_PORT = 9223;
 
-module.exports = ({port = DEFAULT_PORT}) => {
-  const app = express();
-  app.get('*', express.static(__dirname));
+module.exports = ({port = DEFAULT_PORT}, cb) => {
+  const app = (req, res) => {
+    if (req.method === 'GET') {
+      const {p, type} = (() => {
+        if (req.url === '/js/hterm_all.js') {
+          return {
+            p: path.join(__dirname, 'js', 'hterm_all.js'),
+            type: 'application/javascript',
+          };
+        } else {
+          return {
+            p: path.join(__dirname, 'index.html'),
+            type: 'text/html; charset=utf-8',
+          };
+        }
+      })();
+      res.setHeader('Content-Type', type);
+      fs.createReadStream(p)
+        .pipe(res);
+    } else {
+      res.end();
+    }
+  };
 
   const wss = new ws.Server({
     noServer: true
@@ -83,6 +104,8 @@ module.exports = ({port = DEFAULT_PORT}) => {
     };
   };
 
+  const replServer = new EventEmitter();
+
   const server = http.createServer(app);
   server.on('upgrade', (request, socket, head) => {
     wss.handleUpgrade(request, socket, head, ws => {
@@ -91,8 +114,8 @@ module.exports = ({port = DEFAULT_PORT}) => {
       replServer.emit('repl', r);
     });
   });
-  server.listen(port);
-
-  const replServer = new EventEmitter();
-  return replServer;
+  server.on('error', cb);
+  server.listen(port, () => {
+    cb(null, replServer);
+  });
 };
