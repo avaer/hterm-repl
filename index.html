@@ -93,12 +93,13 @@ body {
         },
       };
       window.addEventListener('message', m => {
-        const arrayBuffer = base64ToArrayBuffer(m);
+        const data = base64ToArrayBuffer(m.data);
+        const o = {data};
 
         const listeners = events['message'];
         if (listeners) {
           for (let i = 0; i < listeners.length; i++) {
-            listeners[i](arrayBuffer);
+            listeners[i](o);
           }
         }
       });
