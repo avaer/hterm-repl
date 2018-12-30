@@ -9,6 +9,16 @@ body {
 <div id=terminal></div>
 <script src="js/hterm_all.js"></script>
 <script>
+  function parseQuery(queryString) {
+      var query = {};
+      var pairs = (queryString[0] === '?' ? queryString.substr(1) : queryString).split('&');
+      for (var i = 0; i < pairs.length; i++) {
+          var pair = pairs[i].split('=');
+          query[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+      }
+      return query;
+  }
+
   hterm.defaultStorage = new lib.Storage.Local();
   term = new hterm.Terminal();
   // window.term = term;
