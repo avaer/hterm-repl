@@ -55,6 +55,10 @@ const _makeBufferCat = onmessage => {
 };
 
 module.exports = (opts, cb) => {
+  if (typeof opts === 'function') {
+    cb = opts;
+    opts = undefined;
+  }
   opts = opts || {};
   const {port = null} = opts;
 
