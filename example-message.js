@@ -1,6 +1,6 @@
 const htermRepl = require('.');
 
-htermRepl(null, (err, replServer) => {
+htermRepl((err, replServer) => {
   if (!err) {
     replServer.on('repl', r => {
       r.setEval((s, context, filename, cb) => {
