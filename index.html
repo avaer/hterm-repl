@@ -18,6 +18,8 @@ body {
       }
       return query;
   }
+  const query = parseQuery(window.location.search);
+  const {id, protocol} = query;
 
   hterm.defaultStorage = new lib.Storage.Local();
   term = new hterm.Terminal();
@@ -52,7 +54,7 @@ body {
   }
   term.runCommandClass(CommandClass, document.location.hash.substr(1));
 
-  const socket = new WebSocket((window.location.protocol === 'http:' ? 'ws:' : 'wss:') + '//' + window.location.host + '/' + window.location.search);
+  const socket = new WebSocket((window.location.protocol === 'http:' ? 'ws:' : 'wss:') + '//' + window.location.host + '/?id=' + id);
   socket.binaryType = 'arraybuffer';
   socket.addEventListener('open', () => {
     // console.log('got open');
