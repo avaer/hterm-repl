@@ -85,6 +85,7 @@ module.exports = (opts, cb) => {
     };
   };
   const replServer = new EventEmitter();
+  replServer.url = port ? `http://127.0.0.1:${port}/?protocol=websocket` : `file://${path.join(__dirname, 'index.html')}/?protocol=message`;
   replServer.createConnection = u => {
     const {query} = url.parse(u, true);
     const {id} = query;
