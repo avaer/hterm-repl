@@ -9,6 +9,51 @@ const repl = require('repl');
 
 // const DEFAULT_PORT = 9223;
 
+const _makeBufferCat = onmessage => {
+  const bs = [];
+  let bsBytes = 0;
+  return chunk => {
+    bs.push(chunk);
+    bsBytes += chunk.byteLength;
+
+    for (;;) {
+      if (bsBytes >= Uint32Array.BYTES_PER_ELEMENT) {
+        while (bs[0].byteLength < Uint32Array.BYTES_PER_ELEMENT) {
+          const bsToConcat = [];
+          let bsToConcatBytes = 0;
+          while (bsToConcatBytes < Uint32Array.BYTES_PER_ELEMENT) {
+            const b = bs.pop();
+            bsToConcat.push(b);
+            bsToConcatBytes += b.byteLength;
+          }
+          bs.unshift(Buffer.concat(bsToConcat));
+        }
+      
+        const messageByteLength = new Uint32Array(bs[0].buffer, bs[0].byteOffset, 1)[0];
+
+        if (bsBytes >= Uint32Array.BYTES_PER_ELEMENT + messageByteLength) {
+          const b = bs.length === 1 ? bs[0] : Buffer.concat(bs);
+          bs.length = 0;
+
+          const bMessage = b.slice(Uint32Array.BYTES_PER_ELEMENT, Uint32Array.BYTES_PER_ELEMENT + messageByteLength);
+          const bTail = b.slice(Uint32Array.BYTES_PER_ELEMENT + messageByteLength);
+
+          onmessage(bMessage);
+
+          bsBytes -= (Uint32Array.BYTES_PER_ELEMENT + messageByteLength);
+          if (bTail.byteLength > 0) {
+            bs.push(bTail);
+          }
+        } else {
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+  };
+};
+
 module.exports = (opts, cb) => {
   opts = opts || {};
   const {port = null} = opts;
@@ -91,49 +136,11 @@ module.exports = (opts, cb) => {
     const {id} = query;
 
     const socket = new stream.Transform();
-    const bs = [];
-    let bsBytes = 0;
+    const bcat = _makeBufferCat(b => {
+      socket.emit('message', b.toString('utf8'));
+    });
     socket._transform = (chunk, encoding, cb) => { // input from page
-      bs.push(chunk);
-      bsBytes += chunk.byteLength;
-
-      for (;;) {
-        if (bsBytes >= Uint32Array.BYTES_PER_ELEMENT) {
-          while (bs[0].byteLength < Uint32Array.BYTES_PER_ELEMENT) {
-            const bsToConcat = [];
-            let bsToConcatBytes = 0;
-            while (bsToConcatBytes < Uint32Array.BYTES_PER_ELEMENT) {
-              const b = bs.pop();
-              bsToConcat.push(b);
-              bsToConcatBytes += b.byteLength;
-            }
-            bs.unshift(Buffer.concat(bsToConcat));
-          }
-        
-          const messageByteLength = new Uint32Array(bs[0].buffer, bs[0].byteOffset, 1)[0];
-
-          if (bsBytes >= Uint32Array.BYTES_PER_ELEMENT + messageByteLength) {
-            const b = bs.length === 1 ? bs[0] : Buffer.concat(bs);
-            bs.length = 0;
-
-            const bMessage = b.slice(Uint32Array.BYTES_PER_ELEMENT, Uint32Array.BYTES_PER_ELEMENT + messageByteLength);
-            const bTail = b.slice(Uint32Array.BYTES_PER_ELEMENT + messageByteLength);
-
-            const m = bMessage.toString('utf8');
-            socket.emit('message', m);
-
-            bsBytes -= (Uint32Array.BYTES_PER_ELEMENT + messageByteLength);
-            if (bTail.byteLength > 0) {
-              bs.push(bTail);
-            }
-          } else {
-            break;
-          }
-        } else {
-          break;
-        }
-      }
-
+      bcat(chunk);
       cb();
     };
     socket.send = chunk => { // output to page
