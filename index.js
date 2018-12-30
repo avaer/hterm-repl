@@ -6,11 +6,13 @@ const fs = require('fs');
 const url = require('url');
 const http = require('http');
 const repl = require('repl');
-const ws = require('ws');
 
 // const DEFAULT_PORT = 9223;
 
-module.exports = ({port = null}, cb) => {
+module.exports = (opts, cb) => {
+  opts = opts || {};
+  const {port = null} = opts;
+
   const _makeRepl = (socket, id) => {
     let live = true;
 
@@ -25,6 +27,9 @@ module.exports = ({port = null}, cb) => {
 
       next();
     };
+    output.on('data', d => {
+      console.log('output data', d);
+    });
     const _makeInstance = () => repl.start({
       prompt: '[x] ',
       input,
@@ -127,22 +132,22 @@ module.exports = ({port = null}, cb) => {
           break;
         }
       }
-      
+
       cb();
     };
     socket.send = chunk => { // output to page
       socket.push(chunk);
     };
 
-    process.nextTick(() => {
-      const r = _makeRepl(ws, id);
-      replServer.emit('repl', socket);
-    });
+    const r = _makeRepl(socket, id);
+    replServer.emit('repl', r);
 
     return socket;
   };
 
   if (port) {
+    const ws = require('ws');
+
     const app = (req, res) => {
       if (req.method === 'GET') {
         const {p, type} = (() => {
