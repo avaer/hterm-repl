@@ -9944,7 +9944,7 @@ hterm.ScrollPort.prototype.decorate = function(div) {
   // detect browser zoom level.  We should come up with a better solution.
   // Note: This must be http:// else Chrome cannot create the element correctly.
   var xmlns = 'http://www.w3.org/2000/svg';
-  this.svg_ = this.div_.ownerDocument.createElementNS(xmlns, 'svg');
+  /* this.svg_ = this.div_.ownerDocument.createElementNS(xmlns, 'svg');
   this.svg_.id = 'hterm:zoom-detector';
   this.svg_.setAttribute('xmlns', xmlns);
   this.svg_.setAttribute('version', '1.1');
@@ -9952,7 +9952,7 @@ hterm.ScrollPort.prototype.decorate = function(div) {
       'position: absolute;' +
       'top: 0;' +
       'left: 0;' +
-      'visibility: hidden');
+      'visibility: hidden'); */
 
 
   // We send focus to this element just before a paste happens, so we can
@@ -10229,9 +10229,10 @@ hterm.ScrollPort.prototype.measureCharacterSize = function(opt_weight) {
 
   this.rowNodes_.removeChild(this.ruler_);
 
-  this.div_.ownerDocument.body.appendChild(this.svg_);
+  /* this.div_.ownerDocument.body.appendChild(this.svg_);
   size.zoomFactor = this.svg_.currentScale;
-  this.div_.ownerDocument.body.removeChild(this.svg_);
+  this.div_.ownerDocument.body.removeChild(this.svg_); */
+  size.zoomFactor = 1;
 
   return size;
 };
