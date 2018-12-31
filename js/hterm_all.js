@@ -9726,7 +9726,7 @@ hterm.ScrollPort.Selection.prototype.sync = function() {
     self.endOffset = selection.anchorOffset;
   }
 
-  var selection = this.scrollPort_.getDocument().getSelection();
+  var selection = null; // this.scrollPort_.getDocument().getSelection();
 
   this.startRow = null;
   this.endRow = null;
@@ -13742,7 +13742,7 @@ hterm.Terminal.prototype.syncCursorPosition_ = function() {
                                 ')');
 
   // Update the caret for a11y purposes.
-  var selection = this.document_.getSelection();
+  var selection = null; // this.document_.getSelection();
   if (selection && selection.isCollapsed)
     this.screen_.syncSelectionCaret(selection);
 };
